@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_login"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="登录" />
+        <item
+            android:id="@+id/nav_list"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="工单列表" />
+        <item
+            android:id="@+id/nav_detail"
+            android:icon="@drawable/ic_menu_slideshow"
+            android:title="工单详情" />
+        <item
+            android:id="@+id/nav_upload"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="上传附件" />
+        <item
+            android:id="@+id/nav_download"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="下载附件" />
+    </group>
+
+    <item android:title="Communicate">
+        <menu>
+            <item
+                android:id="@+id/nav_share"
+                android:icon="@drawable/ic_menu_share"
+                android:title="Share" />
+            <item
+                android:id="@+id/nav_send"
+                android:icon="@drawable/ic_menu_send"
+                android:title="Send" />
+        </menu>
+    </item>
+
+</menu>
