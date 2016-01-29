@@ -38,5 +38,9 @@ public abstract class Store<T extends Action> {
         public StoreChangeEvent(ActionImpl action) {
             this.action = action;
         }
+
+        public boolean success() {
+            return null != action.getData();
+        }
     }
 }

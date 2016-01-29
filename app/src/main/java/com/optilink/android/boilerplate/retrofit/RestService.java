@@ -6,12 +6,10 @@ import com.optilink.android.boilerplate.pojo.Driver;
 import com.optilink.android.boilerplate.pojo.WorkOrderData;
 import com.optilink.android.boilerplate.pojo.WorkOrderTodo;
 
-import java.io.File;
 import java.util.List;
 
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.http.Body;
 import retrofit2.http.GET;

@@ -9,20 +9,22 @@ public class ActionImpl implements Action<ArrayMap<String, Object>> {
 
     public ActionImpl(String type, Object... params) {
         this.type = type;
-        this.dataMap = new ArrayMap<>();
         put(params);
     }
 
     private void put(Object... params) {
-        try {
-            int i = 0;
-            while (i < params.length) {
-                String key = (String) params[i++];
-                Object value = params[i++];
-                dataMap.put(key, value);
-            }
-        } catch (IndexOutOfBoundsException e) {
+        int length = params.length;
+        // key-value must correspond
+        if (length % 2 != 0) {
             throw new IllegalArgumentException("Do you forgot the key?");
+        }
+
+        int i = 0;
+        this.dataMap = new ArrayMap<>(length / 2);
+        while (i < length) {
+            String key = (String) params[i++];
+            Object value = params[i++];
+            dataMap.put(key, value);
         }
     }
 

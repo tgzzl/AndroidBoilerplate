@@ -47,6 +47,14 @@ public class MainActivity extends AppCompatActivity
     @Bind(R.id.content)
     TextView mContent;
 
+    int index;
+    String[] urlArray = {
+            "http://pic38.nipic.com/20140215/12359647_224250202132_2.jpg",
+            "http://youlian-production.oss-cn-shenzhen.aliyuncs.com/production/attachments/work_order_tasks/1176/work_118_task_1176_cargo.jpg",
+            "http://driver-app-log-file.file.alimmdn.com/release_99000558798466_2016-01-28.log?t=1454036629306",
+            "http://driver-app-log-file.file.alimmdn.com/sandbox_99000558798466_2016-01-28.log?t=1454036629034"
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,6 +82,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onDestroy() {
+        RestClient.getInstance(this).unsubscribe();
         unregisterStore();
         super.onDestroy();
     }
@@ -115,19 +124,25 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_login) {
-            RestClient.getInstance().login("15818645501", "111111");
-        } else if (id == R.id.nav_list) {
-            RestClient.getInstance().todoList();
-        } else if (id == R.id.nav_detail) {
-            RestClient.getInstance().showWorkOrder(346);
-        } else if (id == R.id.nav_upload) {
-            RestClient.getInstance().uploadTaskAttachment(3277, Environment.getExternalStorageDirectory().getAbsolutePath() + "/1.jpg");
-        } else if (id == R.id.nav_download) {
-            RestClient.getInstance().downloadAttachment(
-                    "http://youlian-production.oss-cn-shenzhen.aliyuncs.com/production/attachments/work_order_tasks/1176/work_118_task_1176_cargo.jpg");
-        } else if (id == R.id.nav_share) {
-            RestClient.getInstance().contributors("square", "retrofit");
+        switch (id) {
+            case R.id.nav_login:
+                RestClient.getInstance(this).login("15818645501", "111111");
+                break;
+            case R.id.nav_list:
+                RestClient.getInstance(this).todoList();
+                break;
+            case R.id.nav_detail:
+                RestClient.getInstance(this).showWorkOrder(346);
+                break;
+            case R.id.nav_upload:
+                RestClient.getInstance(this).uploadTaskAttachment(3277, Environment.getExternalStorageDirectory().getAbsolutePath() + "/1.jpg");
+                break;
+            case R.id.nav_download:
+                RestClient.getInstance(this).downloadAttachment(urlArray[(index++) % urlArray.length]);
+                break;
+            case R.id.nav_share:
+                RestClient.getInstance(this).contributors("square", "retrofit");
+                break;
         }
 
         mDrawerLayout.closeDrawer(GravityCompat.START);
@@ -142,7 +157,7 @@ public class MainActivity extends AppCompatActivity
     @Subscribe
     public void onStoreChangeEvent(Store.StoreChangeEvent event) {
         String type = event.action.getType();
-        ArrayMap<String, Object> map = event.action.getData();
+        ArrayMap<String, Object> dataMap = event.action.getData();
 
         switch (type) {
             case ActionConf.ACTION_SHOW_PROGRESS_DIALOG:
@@ -152,10 +167,14 @@ public class MainActivity extends AppCompatActivity
                 DialogUtils.dismiss(getSupportFragmentManager(), DIALOG_TAG_LOADING_DATA);
                 break;
             case ActionConf.ACTION_REPORT_ERROR:
-                render(ThrowableUtil.printStackTrace((Throwable) map.get(ActionConf.ACTION_KEY_ONLY_ONE)));
+                if (event.success()) {
+                    render(ThrowableUtil.printStackTrace((Throwable) dataMap.get(ActionConf.ACTION_KEY_ONLY_ONE)));
+                }
                 break;
             default:
-                render(map.get(ActionConf.ACTION_KEY_ONLY_ONE));
+                if (event.success()) {
+                    render(dataMap.get(ActionConf.ACTION_KEY_ONLY_ONE));
+                }
                 break;
         }
     }
