@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import okhttp3.Headers;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -49,8 +48,8 @@ public class RestClient {
     static RestClient sInstance;
 
     Context context;
-    String uid = null;
-    String token = null;
+    String uid;
+    String token;
     OkHttpClient client;
     Retrofit retrofit;
     RestService service;
@@ -69,8 +68,8 @@ public class RestClient {
                         Request request = chain.request();
                         Response response = chain.proceed(request);
 
-                        Timber.d("[intercept] %s", request);
                         String contentType = response.headers().get("Content-Type");
+                        Timber.d("[intercept] %s Content-Type:%s", request, contentType);
                         if (!TextUtils.isEmpty(contentType) && contentType.startsWith("application/json;")) {
                             // Response bodies can only be read once
                             String bodyString = response.body().string();
@@ -152,6 +151,51 @@ public class RestClient {
         return !(TextUtils.isEmpty(uid) || TextUtils.isEmpty(token));
     }
 
+    void showDownloadProgress(BufferedSource source, BufferedSink sink, long contentLength) throws IOException {
+        int bufferSize = 1024;
+        long count, total = 0;
+        int progress, lastProgress = 0;
+        while ((count = source.read(sink.buffer(), bufferSize)) != -1) {
+            total += count;
+            progress = (int) (100 * total / contentLength);
+            if (lastProgress != progress) {
+                lastProgress = progress;
+                Timber.d("[DownloadProgress] %d", progress);
+            }
+        }
+    }
+
+    String saveFile(String url, final retrofit2.Response<ResponseBody> response) {
+        try {
+            int end = url.lastIndexOf('?');
+            if (end < 0) {
+                end = url.length();
+            }
+            String fileName = url.substring(url.lastIndexOf('/') + 1, end);
+            File file = new File(Environment.getExternalStorageDirectory().getAbsoluteFile(), fileName);
+
+            ResponseBody body = response.body();
+            BufferedSource source = body.source();
+            BufferedSink sink = Okio.buffer(Okio.sink(file));
+            showDownloadProgress(source, sink, body.contentLength());
+            sink.writeAll(source);
+            sink.close();
+
+            return file.getAbsolutePath();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    void subscribe(Subscription subscription) {
+        subscriptions.add(subscription);
+    }
+
     public void unsubscribe() {
         for (Subscription obj : subscriptions) {
             if (!obj.isUnsubscribed()) {
@@ -160,6 +204,10 @@ public class RestClient {
         }
         subscriptions.clear();
     }
+
+    /**************************************************
+     * 业务逻辑示例                                   *
+     **************************************************/
 
     public void login(String username, String password) {
         sendActionProgressDialog();
@@ -176,7 +224,7 @@ public class RestClient {
                     }
                 });
 
-        subscriptions.add(subscription);
+        subscribe(subscription);
     }
 
     public void todoList() {
@@ -189,7 +237,7 @@ public class RestClient {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Subscriber<WorkOrderTodo>(ActionConf.ACTION_WORK_ORDER_TODO_LIST));
 
-            subscriptions.add(subscription);
+            subscribe(subscription);
         } else {
             Subscription subscription = getService()
                     .login("15818645501", "111111")
@@ -204,7 +252,7 @@ public class RestClient {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Subscriber<WorkOrderTodo>(ActionConf.ACTION_WORK_ORDER_TODO_LIST));
 
-            subscriptions.add(subscription);
+            subscribe(subscription);
         }
     }
 
@@ -218,7 +266,7 @@ public class RestClient {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Subscriber<WorkOrderData>(ActionConf.ACTION_SHOW_WORK_ORDER));
 
-            subscriptions.add(subscription);
+            subscribe(subscription);
         } else {
             Subscription subscription = getService()
                     .login("15818645501", "111111")
@@ -233,7 +281,7 @@ public class RestClient {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Subscriber<WorkOrderData>(ActionConf.ACTION_SHOW_WORK_ORDER));
 
-            subscriptions.add(subscription);
+            subscribe(subscription);
         }
     }
 
@@ -253,7 +301,7 @@ public class RestClient {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Subscriber<BaseResponse>(ActionConf.ACTION_UPLOAD_TASK_ATTACHMENT));
 
-            subscriptions.add(subscription);
+            subscribe(subscription);
         } else {
             Subscription subscription = getService()
                     .login("15818645501", "111111")
@@ -268,24 +316,24 @@ public class RestClient {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Subscriber<BaseResponse>(ActionConf.ACTION_UPLOAD_TASK_ATTACHMENT));
 
-            subscriptions.add(subscription);
+            subscribe(subscription);
         }
     }
 
     public void downloadAttachment(final String url) {
         Subscription subscription = getService()
                 .downloadAttachment(url)
-                .map(new Func1<retrofit2.Response<ResponseBody>, File>() {
+                .map(new Func1<retrofit2.Response<ResponseBody>, String>() {
                     @Override
-                    public File call(retrofit2.Response<ResponseBody> response) {
+                    public String call(retrofit2.Response<ResponseBody> response) {
                         return saveFile(url, response);
                     }
                 })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<File>(ActionConf.ACTION_DOWNLOAD_ATTACHMENT));
+                .subscribe(new Subscriber<String>(ActionConf.ACTION_DOWNLOAD_ATTACHMENT));
 
-        subscriptions.add(subscription);
+        subscribe(subscription);
     }
 
     public void contributors(String owner, String repo) {
@@ -301,55 +349,8 @@ public class RestClient {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<Contributor>(ActionConf.ACTION_CONTRIBUTORS));
 
-        subscriptions.add(subscription);
+        subscribe(subscription);
     }
 
-    private void print(Response response) {
-        Headers responseHeaders = response.headers();
-        for (int i = 0; i < responseHeaders.size(); i++) {
-            Timber.d("%s: %s", responseHeaders.name(i), responseHeaders.value(i));
-        }
 
-        try {
-            Timber.d(response.body().string());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private File saveFile(String url, final retrofit2.Response<ResponseBody> response) {
-        try {
-            int end = url.lastIndexOf('?');
-            if (end < 0) {
-                end = url.length();
-            }
-            String fileName = url.substring(url.lastIndexOf('/') + 1, end);
-            File file = new File(Environment.getExternalStorageDirectory().getAbsoluteFile(), fileName);
-
-            ResponseBody body = response.body();
-            long contentLength = body.contentLength();
-
-            BufferedSource source = body.source();
-            BufferedSink sink = Okio.buffer(Okio.sink(file));
-//            long count = 0;
-//            long total = 0;
-//            while ((count = source.read(sink.buffer(), 1024)) != -1) {
-//                total += count;
-//                Timber.d("%d", total * 100 / contentLength);
-//            }
-            sink.writeAll(source);
-            sink.close();
-
-            Timber.d("Head Content-Length:%s, BodyContentLength:%d, FileLength:%d",
-                    response.headers().get("Content-Length"), contentLength, file.length());
-
-            return file;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            return null;
-        }
-    }
 }
