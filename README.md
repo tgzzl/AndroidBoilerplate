@@ -1,6 +1,7 @@
 使用Android新锐成熟的框架，搭建一个快速开发APP的环境 
 
 主要用到的框架（参考资料）：
+
 1、Otto event bus  
 http://square.github.io/otto/
 
@@ -18,6 +19,7 @@ https://github.com/JakeWharton/butterknife
 https://github.com/JakeWharton/timber
 
 架构思想：
+
 1、flux & AndroidFlux
 https://facebook.github.io/flux/
 https://github.com/facebook/flux/
